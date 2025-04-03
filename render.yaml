@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: crash-backend
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    plan: free
+    branch: main
+    autoDeploy: true
