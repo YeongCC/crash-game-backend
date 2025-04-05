@@ -4,6 +4,7 @@ import {
   generateCrashPoint,
   generateServerSeed,
   calculateScalingFactor,
+  generateQuotaPool,
 } from './utils/gameUtils';
 
 interface Bet {
@@ -23,7 +24,10 @@ export class GameService {
   private bets: Bet[] = [];
   private recentPayouts: number[] = [];
   private interval: ReturnType<typeof setInterval>;
-
+  private countdown: number = 0;
+  private quotaPool: ('low' | 'mid' | 'high')[] = [];
+  private currentRound = 0;
+  
   setServer(server: Server) {
     this.server = server;
   }
@@ -46,19 +50,55 @@ export class GameService {
     this.gameState = 'waiting';
     this.multiplier = 1.0;
     this.bets = [];
+    this.countdown = 5;
+
     this.broadcastState();
 
-    setTimeout(() => {
-      this.startGame();
-    }, 5000);
+    this.server.emit('game_state', {
+      state: 'waiting',
+      multiplier: 0,
+      crashPoint: null,
+      countdown: this.countdown,
+      bets: [],
+    });
+
+    const countdownInterval = setInterval(() => {
+      if (this.countdown > 1) {
+        this.countdown--;
+        this.server.emit('game_state', {
+          state: 'waiting',
+          multiplier: 0,
+          crashPoint: null,
+          countdown: this.countdown,
+          bets: this.bets.map((b) => ({
+            clientId: b.clientId,
+            username: this.clients[b.clientId],
+            amount: b.amount,
+            cashedOut: b.cashedOut,
+            multiplier: b.multiplierAtCashout ?? null,
+          })),
+        });
+      } else {
+        clearInterval(countdownInterval);
+        this.startGame(); 
+      }
+
+    }, 1000);
   }
 
   private startGame() {
     this.gameState = 'running';
+    
+    if (this.currentRound % 10 === 0) {
+      this.quotaPool = generateQuotaPool();
+    }
+  
+    const quotaType = this.quotaPool[this.currentRound % 10];
     const scaling = calculateScalingFactor(this.recentPayouts.slice(-10));
     const seed = generateServerSeed();
-    this.crashPoint = generateCrashPoint(seed, scaling);
-
+    this.crashPoint = generateCrashPoint(quotaType, seed, scaling);
+    console.log("crashPoint: "+this.crashPoint)
+    this.countdown = 0;
     this.interval = setInterval(() => {
       this.multiplier = +(this.multiplier + 0.01).toFixed(2);
 
@@ -75,6 +115,7 @@ export class GameService {
 
       this.broadcastState();
     }, 100);
+    this.currentRound++;
   }
 
   private endGame() {
@@ -90,8 +131,10 @@ export class GameService {
     this.recentPayouts.push(max);
     if (this.recentPayouts.length > 10) this.recentPayouts.shift();
 
-    this.broadcastState();
-    setTimeout(() => this.loopWaiting(), 5000);
+    this.broadcastState(); 
+    this.countdown = 5;
+    this.gameState = 'waiting';
+    setTimeout(() => this.loopWaiting(), 0);
   }
 
   placeBet(clientId: string, amount: number) {
@@ -115,7 +158,9 @@ export class GameService {
       state: this.gameState,
       multiplier: this.multiplier,
       crashPoint: this.crashPoint,
+      countdown: this.countdown,
       bets: this.bets.map(b => ({
+        clientId: b.clientId,
         username: this.clients[b.clientId],
         amount: b.amount,
         cashedOut: b.cashedOut,
@@ -123,4 +168,20 @@ export class GameService {
       })),
     });
   }
+
+  cancelBet(clientId: string) {
+    if (this.gameState !== 'waiting') return;
+    const index = this.bets.findIndex(b => b.clientId === clientId && !b.cashedOut);
+    if (index !== -1) {
+      this.bets.splice(index, 1);
+      this.broadcastState();
+    }
+    this.bets = this.bets.filter(bet => this.clients[bet.clientId]);
+  }
+
+  getRecentPayouts(): number[] {
+    return this.recentPayouts.slice(-10);
+  }
+  
 }
+ 

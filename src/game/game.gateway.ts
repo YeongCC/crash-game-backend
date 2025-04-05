@@ -14,7 +14,7 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly gameService: GameService) {}
+  constructor(private readonly gameService: GameService) { }
 
   afterInit(server: Server) {
     this.gameService.setServer(server);
@@ -37,5 +37,10 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   @SubscribeMessage('cash_out')
   handleCashOut(client: Socket) {
     this.gameService.cashOut(client.id);
+  }
+
+  @SubscribeMessage('cancel_bet')
+  handleCancelBet(client: Socket) {
+    this.gameService.cancelBet(client.id);
   }
 }
