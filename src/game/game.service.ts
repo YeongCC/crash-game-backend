@@ -97,16 +97,11 @@ export class GameService {
     const scaling = calculateScalingFactor(this.recentPayouts.slice(-10));
     const seed = generateServerSeed();
     this.crashPoint = generateCrashPoint(quotaType, seed, scaling);
+    this.crashPoint = 5;
     console.log("crashPoint: "+this.crashPoint)
     this.countdown = 0;
     this.interval = setInterval(() => {
       this.multiplier = +(this.multiplier + 0.01).toFixed(2);
-
-      this.bets.forEach(bet => {
-        if (!bet.cashedOut && this.multiplier >= 2.0) {
-          this.cashOut(bet.clientId);
-        }
-      });
 
       if (this.multiplier >= this.crashPoint) {
         clearInterval(this.interval);
