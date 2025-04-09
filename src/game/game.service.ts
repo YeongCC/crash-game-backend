@@ -97,7 +97,6 @@ export class GameService {
     const scaling = calculateScalingFactor(this.recentPayouts.slice(-10));
     const seed = generateServerSeed();
     this.crashPoint = generateCrashPoint(quotaType, seed, scaling);
-    this.crashPoint = 5;
     console.log("crashPoint: "+this.crashPoint)
     this.countdown = 0;
     this.interval = setInterval(() => {
