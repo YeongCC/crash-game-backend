@@ -8,15 +8,21 @@ export class UserService {
   constructor(
     @InjectRepository(User)
     private users: Repository<User>,
-  ) {}
+  ) { }
 
   async getOrCreate(username: string): Promise<User> {
     let user = await this.users.findOne({ where: { username } });
-    if (!user) {
-      user = this.users.create({ username });
-      await this.users.save(user);
+    if (user) return user;
+
+    try {
+      const newUser = this.users.create({ username });
+      return await this.users.save(newUser);
+    } catch (err) {
+      if (err.code === '23505') {
+        return await this.users.findOne({ where: { username } });
+      }
+      throw err; 
     }
-    return user;
   }
 
   async getBalance(username: string): Promise<number> {
