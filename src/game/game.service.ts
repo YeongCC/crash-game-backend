@@ -13,6 +13,7 @@ interface Bet {
   amount: number;
   cashedOut: boolean;
   multiplierAtCashout?: number;
+  autoCashout?: number;
 }
 
 @Injectable()
@@ -109,6 +110,12 @@ export class GameService {
     this.interval = setInterval(() => {
       this.multiplier = +(this.multiplier + 0.01).toFixed(2);
 
+      this.bets.forEach(bet => {
+        if (!bet.cashedOut && bet.autoCashout && this.multiplier >= bet.autoCashout) {
+          this.cashOut(bet.clientId);
+        }
+      });    
+
       if (this.multiplier >= this.crashPoint) {
         clearInterval(this.interval);
         this.endGame();
@@ -158,7 +165,7 @@ export class GameService {
     setTimeout(() => this.loopWaiting(), 0);
   }
 
-  async placeBet(clientId: string, amount: number) {
+  async placeBet(clientId: string, amount: number, autoCashout?: number) {
     if (this.gameState !== 'waiting') return;
     const username = this.clients[clientId];
     const already = this.bets.find(b => b.clientId === clientId);
@@ -168,7 +175,13 @@ export class GameService {
     } catch (e) {
       return;
     }
-    this.bets.push({ clientId, amount, cashedOut: false });
+    this.bets.push({
+      clientId,
+      amount,
+      cashedOut: false,
+      autoCashout, 
+    });
+  
     this.broadcastState();
   }
 

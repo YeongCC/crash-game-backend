@@ -30,8 +30,8 @@ export class GameGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('place_bet')
-  handleBet(client: Socket, data: { amount: number }) {
-    this.gameService.placeBet(client.id, data.amount);
+  handleBet(client: Socket, data: { amount: number; autoCashout?: number }) {
+    this.gameService.placeBet(client.id, data.amount, data.autoCashout);
   }
 
   @SubscribeMessage('cash_out')
