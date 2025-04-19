@@ -1,3 +1,4 @@
+import * as crypto from 'crypto';
 const HASH_PRECISION = Math.pow(2, 32);
 
 export const generateQuotaPool = (): ('low' | 'mid' | 'high')[] => {
@@ -16,22 +17,23 @@ export const generateQuotaPool = (): ('low' | 'mid' | 'high')[] => {
 export const generateCrashPoint = (
   type: 'low' | 'mid' | 'high',
   serverSeed: string,
-  scalingFactor: number = 1
+  scalingFactor: number = 1,
+  riskScore: number = 0
 ): number => {
-  const hash = serverSeed.slice(0, 8);
+  const sha256 = crypto.createHash('sha256').update(serverSeed).digest('hex');
+  const hash = sha256.slice(0, 8);
   const hashDecimal = parseInt(hash, 16) / HASH_PRECISION;
   const adjusted = Math.min(Math.max(hashDecimal * scalingFactor, 0), 0.9999);
-  let result: number;
 
+  const biased = Math.pow(adjusted, 1 + riskScore * 3);
+
+  let result: number;
   if (type === 'low') {
-    const normalized = adjusted;
-    result = 1 + Math.pow(normalized, 0.6) * 0.9; 
+    result = 1 + Math.pow(biased, 0.6) * 0.9;
   } else if (type === 'mid') {
-    const normalized = adjusted;
-    result = 2 + normalized * 3.0; 
+    result = 2 + biased * 3;
   } else {
-    const normalized = adjusted;
-    result = 5 + Math.pow(normalized, 1.5) * 25;
+    result = 5 + Math.pow(biased, 2) * 35;
   }
 
   return Math.round(result * 100) / 100;

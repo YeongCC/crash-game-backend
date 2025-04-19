@@ -7,6 +7,7 @@ import {
   generateQuotaPool,
 } from './utils/gameUtils';
 import { UserService } from 'src/user/user.service';
+import * as crypto from 'crypto';
 
 interface Bet {
   clientId: string;
@@ -29,6 +30,9 @@ export class GameService {
   private countdown: number = 0;
   private quotaPool: ('low' | 'mid' | 'high')[] = [];
   private currentRound = 0;
+  private lastRoundWinners: number = 0;
+  private recentSystemProfit: number[] = [];
+  private currentServerSeed: string = null;
 
   constructor(
     private readonly userService: UserService
@@ -93,6 +97,22 @@ export class GameService {
     }, 1000);
   }
 
+  private calculateTotalRiskScore(): number {
+    if (this.bets.length === 0) return 1;
+
+    const riskyCount = this.bets.filter(b => b.autoCashout && b.autoCashout <= 1.05).length; // 提高範圍
+    const riskyRatio = riskyCount / this.bets.length;
+  
+    const winRatio = this.lastRoundWinners / this.bets.length;
+  
+    const recentProfit = this.recentSystemProfit.reduce((a, b) => a + b, 0);
+    const systemLosingRatio = recentProfit < 0 ? Math.min(Math.abs(recentProfit) / 500, 1) : 0; // 擴大虧損感知
+  
+    const totalRisk = 0.5 * riskyRatio + 0.4 * winRatio + 0.3 * systemLosingRatio;
+    return Math.min(Math.max(totalRisk, 0), 1);
+  }
+
+
   private startGame() {
     this.gameState = 'running';
 
@@ -103,8 +123,9 @@ export class GameService {
     const quotaType = this.quotaPool[this.currentRound % 10];
     const scaling = calculateScalingFactor(this.recentPayouts.slice(-10));
     const seed = generateServerSeed();
-    this.crashPoint = generateCrashPoint(quotaType, seed, scaling);
-    // this.crashPoint = 2;
+    const riskScore = this.calculateTotalRiskScore();
+    this.currentServerSeed = seed;
+    this.crashPoint = generateCrashPoint(quotaType, seed, scaling, riskScore);
     console.log("crashPoint: " + this.crashPoint)
     this.countdown = 0;
     this.interval = setInterval(() => {
@@ -114,7 +135,7 @@ export class GameService {
         if (!bet.cashedOut && bet.autoCashout && this.multiplier >= bet.autoCashout) {
           this.cashOut(bet.clientId);
         }
-      });    
+      });
 
       if (this.multiplier >= this.crashPoint) {
         clearInterval(this.interval);
@@ -145,10 +166,16 @@ export class GameService {
       })
     ));
 
+    const serverSeed = this.currentServerSeed;
+    const hash = crypto.createHash('sha256').update(serverSeed).digest('hex'); 
+
     this.server.emit('game_state', {
       state: 'crashed',
       multiplier: this.multiplier,
       crashPoint: this.crashPoint,
+      endCrashPoint: this.crashPoint,
+      serverSeed,
+      hash, 
       countdown: 5,
       bets: this.bets.map(b => ({
         clientId: b.clientId,
@@ -179,9 +206,9 @@ export class GameService {
       clientId,
       amount,
       cashedOut: false,
-      autoCashout, 
+      autoCashout,
     });
-  
+
     this.broadcastState();
   }
 
