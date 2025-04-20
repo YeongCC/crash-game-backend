@@ -125,8 +125,8 @@ export class GameService {
     const seed = generateServerSeed();
     const riskScore = this.calculateTotalRiskScore();
     this.currentServerSeed = seed;
-    this.crashPoint = generateCrashPoint(quotaType, seed, scaling, riskScore);
-    console.log("crashPoint: " + this.crashPoint)
+    this.crashPoint = generateCrashPoint(quotaType, seed, scaling, riskScore, this.bets.length);
+    console.log(`🎯 Round #${this.currentRound + 1} → Quota: [${quotaType}] → CrashPoint: ${this.crashPoint}`);
     this.countdown = 0;
     this.interval = setInterval(() => {
       this.multiplier = +(this.multiplier + 0.01).toFixed(2);

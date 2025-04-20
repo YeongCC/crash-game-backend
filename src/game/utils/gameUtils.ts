@@ -18,7 +18,8 @@ export const generateCrashPoint = (
   type: 'low' | 'mid' | 'high',
   serverSeed: string,
   scalingFactor: number = 1,
-  riskScore: number = 0
+  riskScore: number = 0,
+  betCount: number = 0  
 ): number => {
   const sha256 = crypto.createHash('sha256').update(serverSeed).digest('hex');
   const hash = sha256.slice(0, 8);
@@ -27,13 +28,28 @@ export const generateCrashPoint = (
 
   const biased = Math.pow(adjusted, 1 + riskScore * 3);
 
+  let boostFactor = 1;
+  if (betCount === 0) {
+    boostFactor = 1.6;
+  } else if (betCount <= 3) {
+    boostFactor = 1.3;
+  } else if (betCount > 10) {
+    boostFactor = 0.8;
+  }
+
+  const leakChance = Math.random();
+  const shouldLeak = betCount > 5 && leakChance < 0.1;
+  if (shouldLeak) {
+    boostFactor = 1.5;
+  }
+
   let result: number;
   if (type === 'low') {
-    result = 1 + Math.pow(biased, 0.6) * 0.9;
+    result = 1 + Math.pow(biased, 0.6) * 0.9 * boostFactor;
   } else if (type === 'mid') {
-    result = 2 + biased * 3;
+    result = (2 + biased * 3) * boostFactor;
   } else {
-    result = 5 + Math.pow(biased, 2) * 35;
+    result = (5 + Math.pow(biased, 2) * 35) * boostFactor;
   }
 
   return Math.round(result * 100) / 100;
