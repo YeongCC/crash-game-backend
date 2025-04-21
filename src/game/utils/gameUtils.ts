@@ -37,11 +37,11 @@ export const generateCrashPoint = (
     boostFactor = 0.8;
   }
 
-  const leakChance = Math.random();
-  const shouldLeak = betCount > 5 && leakChance < 0.1;
-  if (shouldLeak) {
-    boostFactor = 1.5;
-  }
+  // const leakChance = Math.random();
+  // const shouldLeak = betCount > 5 && leakChance < 0.1;
+  // if (shouldLeak) {
+  //   boostFactor = 1.5;
+  // }
 
   let result: number;
   if (type === 'low') {
