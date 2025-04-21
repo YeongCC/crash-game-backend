@@ -30,11 +30,11 @@ export const generateCrashPoint = (
 
   let boostFactor = 1;
   if (betCount === 0) {
-    boostFactor = 1.6;
-  } else if (betCount <= 3) {
-    boostFactor = 1.3;
-  } else if (betCount > 10) {
     boostFactor = 0.8;
+  } else if (betCount <= 3) {
+    boostFactor = 0.6;
+  } else if (betCount > 10) {
+    boostFactor = 0.4;
   }
 
   // const leakChance = Math.random();
