@@ -98,17 +98,33 @@ export class GameService {
   }
 
   private calculateTotalRiskScore(): number {
+    // if (this.bets.length === 0) return 1;
+
+    // const riskyCount = this.bets.filter(b => b.autoCashout && b.autoCashout <= 1.05).length; // 提高範圍
+    // const riskyRatio = riskyCount / this.bets.length;
+  
+    // const winRatio = this.lastRoundWinners / this.bets.length;
+  
+    // const recentProfit = this.recentSystemProfit.reduce((a, b) => a + b, 0);
+    // const systemLosingRatio = recentProfit < 0 ? Math.min(Math.abs(recentProfit) / 500, 1) : 0; // 擴大虧損感知
+  
+    // const totalRisk = 0.5 * riskyRatio + 0.4 * winRatio + 0.3 * systemLosingRatio;
+    // return Math.min(Math.max(totalRisk, 0), 1);
+
     if (this.bets.length === 0) return 1;
 
-    const riskyCount = this.bets.filter(b => b.autoCashout && b.autoCashout <= 1.05).length; // 提高範圍
+    const riskyCount = this.bets.filter(b => b.autoCashout && b.autoCashout <= 1.05).length;
     const riskyRatio = riskyCount / this.bets.length;
   
     const winRatio = this.lastRoundWinners / this.bets.length;
   
     const recentProfit = this.recentSystemProfit.reduce((a, b) => a + b, 0);
-    const systemLosingRatio = recentProfit < 0 ? Math.min(Math.abs(recentProfit) / 500, 1) : 0; // 擴大虧損感知
+    const systemLosingRatio = recentProfit < 0 ? Math.min(Math.abs(recentProfit) / 500, 1) : 0;
   
-    const totalRisk = 0.5 * riskyRatio + 0.4 * winRatio + 0.3 * systemLosingRatio;
+    const superSafeStreak = this.bets.filter(b => b.autoCashout === 1.01).length;
+    const safeAbuseRatio = Math.min(superSafeStreak / this.bets.length, 1);
+  
+    const totalRisk = 0.4 * riskyRatio + 0.3 * winRatio + 0.2 * systemLosingRatio + 0.3 * safeAbuseRatio;
     return Math.min(Math.max(totalRisk, 0), 1);
   }
 

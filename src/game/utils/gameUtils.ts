@@ -24,35 +24,52 @@ export const generateCrashPoint = (
   const sha256 = crypto.createHash('sha256').update(serverSeed).digest('hex');
   const hash = sha256.slice(0, 8);
   const hashDecimal = parseInt(hash, 16) / HASH_PRECISION;
-  const adjusted = Math.min(Math.max(hashDecimal * scalingFactor, 0), 0.9999);
+  // const adjusted = Math.min(Math.max(hashDecimal * scalingFactor, 0), 0.9999);
 
-  const biased = Math.pow(adjusted, 1 + riskScore * 3);
+  // const biased = Math.pow(adjusted, 1 + riskScore * 3);
 
-  let boostFactor = 1;
-  if (betCount === 0) {
-    boostFactor = 0.8;
-  } else if (betCount <= 3) {
-    boostFactor = 0.6;
-  } else if (betCount > 10) {
-    boostFactor = 0.4;
-  }
-
-  // const leakChance = Math.random();
-  // const shouldLeak = betCount > 5 && leakChance < 0.1;
-  // if (shouldLeak) {
-  //   boostFactor = 1.5;
+  // let boostFactor = 1;
+  // if (betCount === 0) {
+  //   boostFactor = 0.8;
+  // } else if (betCount <= 3) {
+  //   boostFactor = 0.6;
+  // } else if (betCount > 10) {
+  //   boostFactor = 0.4;
   // }
 
-  let result: number;
+  // let result: number;
+  // if (type === 'low') {
+  //   result = 1 + Math.pow(biased, 0.6) * 0.9 * boostFactor;
+  // } else if (type === 'mid') {
+  //   result = (2 + biased * 3) * boostFactor;
+  // } else {
+  //   result = (5 + Math.pow(biased, 2) * 35) * boostFactor;
+  // }
+
+  // return Math.round(result * 100) / 100;
+
+  let baseCrash: number;
+
   if (type === 'low') {
-    result = 1 + Math.pow(biased, 0.6) * 0.9 * boostFactor;
+    if (hashDecimal < 0.85) {
+      baseCrash = 1.01 + hashDecimal * 0.89; 
+    } else {
+      baseCrash = 1.9 + (hashDecimal - 0.85) / 0.15 * 0.1;
+    }
   } else if (type === 'mid') {
-    result = (2 + biased * 3) * boostFactor;
+    baseCrash = 2.0 + hashDecimal * 3.0;
   } else {
-    result = (5 + Math.pow(biased, 2) * 35) * boostFactor;
+    baseCrash = 5.0 + hashDecimal * 15.0; 
   }
 
-  return Math.round(result * 100) / 100;
+  let punishmentMultiplier = 1;
+
+  if (riskScore > 0.6) {
+    punishmentMultiplier -= (riskScore - 0.6) * 0.7; 
+  }
+
+  const result = Math.max(1.01, Math.round(baseCrash * punishmentMultiplier * 100) / 100);
+  return result;
 };
 
 export const generateServerSeed = (): string => {
