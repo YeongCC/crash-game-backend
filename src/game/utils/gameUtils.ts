@@ -24,30 +24,6 @@ export const generateCrashPoint = (
   const sha256 = crypto.createHash('sha256').update(serverSeed).digest('hex');
   const hash = sha256.slice(0, 8);
   const hashDecimal = parseInt(hash, 16) / HASH_PRECISION;
-  // const adjusted = Math.min(Math.max(hashDecimal * scalingFactor, 0), 0.9999);
-
-  // const biased = Math.pow(adjusted, 1 + riskScore * 3);
-
-  // let boostFactor = 1;
-  // if (betCount === 0) {
-  //   boostFactor = 0.8;
-  // } else if (betCount <= 3) {
-  //   boostFactor = 0.6;
-  // } else if (betCount > 10) {
-  //   boostFactor = 0.4;
-  // }
-
-  // let result: number;
-  // if (type === 'low') {
-  //   result = 1 + Math.pow(biased, 0.6) * 0.9 * boostFactor;
-  // } else if (type === 'mid') {
-  //   result = (2 + biased * 3) * boostFactor;
-  // } else {
-  //   result = (5 + Math.pow(biased, 2) * 35) * boostFactor;
-  // }
-
-  // return Math.round(result * 100) / 100;
-
   let baseCrash: number;
 
   if (type === 'low') {
@@ -59,7 +35,7 @@ export const generateCrashPoint = (
   } else if (type === 'mid') {
     baseCrash = 2.0 + hashDecimal * 3.0;
   } else {
-    baseCrash = 5.0 + hashDecimal * 15.0; 
+    baseCrash = 5.0 + hashDecimal * 35.0; 
   }
 
   let punishmentMultiplier = 1;
